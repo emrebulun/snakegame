@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P.Ö.H. YILANI - Liderlik Tablosu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <div class="game-container">
+            <div class="ui-layer">
+                <div class="score-board">
+                    <div class="score-item">
+                        <span class="label">OYUNCU</span>
+                        <span class="value player-name" id="current-player-name">-</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="label">SKOR</span>
+                        <span class="value" id="score">0</span>
+                    </div>
+                </div>
+
+                <div id="start-screen" class="screen active">
+                    <h1 class="title">P.Ö.H. YILANI</h1>
+                    <div class="name-input-container">
+                        <label for="player-name">İsminizi Girin</label>
+                        <input type="text" id="player-name" maxlength="15" placeholder="Oyuncu" autocomplete="off" />
+                    </div>
+                    <p class="instruction">Başlamak için <span class="key">SPACE</span> tuşuna bas</p>
+                    <p class="controls">Yön Tuşları veya <span class="key">WASD</span> ile Kontrol Et</p>
+
+                    <div class="leaderboard">
+                        <h3>🏆 LİDERLİK TABLOSU</h3>
+                        <div id="leaderboard-list"></div>
+                    </div>
+                </div>
+
+                <div id="game-over-screen" class="screen">
+                    <h1 class="title">OYUN BİTTİ</h1>
+                    <p class="final-score">Skorun: <span id="final-score-value">0</span></p>
+                    <div id="new-record" class="new-record">🎉 YENİ REKOR! 🎉</div>
+                    <button id="restart-btn" class="btn">TEKRAR OYNA</button>
+
+                    <div class="leaderboard">
+                        <h3>🏆 LİDERLİK TABLOSU</h3>
+                        <div id="leaderboard-list-gameover"></div>
+                    </div>
+                </div>
+            </div>
+            <canvas id="game-canvas"></canvas>
+        </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+</body>
+
+</html>
