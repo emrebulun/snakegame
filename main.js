@@ -10,6 +10,11 @@ const TILE_COUNT_Y = 30;
 const CANVAS_WIDTH = GRID_SIZE * TILE_COUNT_X;
 const CANVAS_HEIGHT = GRID_SIZE * TILE_COUNT_Y;
 const GAME_SPEED = 100;
+const OBSTACLE_COLOR = '#ef4444'; // Red-500
+const BONUS_COLOR = '#eab308'; // Yellow-500
+const BONUS_SCORE = 50;
+const LEVEL_UP_SCORE = 50;
+const BONUS_DURATION = 5000; // 5 seconds
 
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
@@ -25,9 +30,14 @@ let lastTime = 0;
 let isGameOver = false;
 let particles = [];
 let playerName = '';
+let level = 1;
+let obstacles = [];
+let bonusItem = null; // {x, y, timer}
+let lastBonusSpawnTime = 0;
 
 // UI Elements
 const scoreEl = document.getElementById('score');
+const levelEl = document.getElementById('level');
 const currentPlayerNameEl = document.getElementById('current-player-name');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
@@ -123,10 +133,15 @@ function initGame() {
   direction = { x: 1, y: 0 };
   nextDirection = { x: 1, y: 0 };
   score = 0;
+  level = 1;
+  obstacles = [];
+  bonusItem = null;
   isGameOver = false;
   particles = [];
   scoreEl.textContent = score;
+  levelEl.textContent = level;
   placeFood();
+  generateObstacles();
 
   startScreen.classList.remove('active');
   gameOverScreen.classList.remove('active');
@@ -142,8 +157,52 @@ function placeFood() {
     food.x = Math.floor(Math.random() * TILE_COUNT_X);
     food.y = Math.floor(Math.random() * TILE_COUNT_Y);
 
-    valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+    valid = !snake.some(segment => segment.x === food.x && segment.y === food.y) &&
+      !obstacles.some(obs => obs.x === food.x && obs.y === food.y);
   }
+}
+
+function generateObstacles() {
+  obstacles = [];
+  const obstacleCount = (level - 1) * 3; // 3 obstacles per level after level 1
+
+  for (let i = 0; i < obstacleCount; i++) {
+    let valid = false;
+    let obs = { x: 0, y: 0 };
+    while (!valid) {
+      obs.x = Math.floor(Math.random() * TILE_COUNT_X);
+      obs.y = Math.floor(Math.random() * TILE_COUNT_Y);
+
+      // Avoid snake (give some buffer around head)
+      const distToHead = Math.abs(obs.x - snake[0].x) + Math.abs(obs.y - snake[0].y);
+
+      valid = distToHead > 5 &&
+        !snake.some(segment => segment.x === obs.x && segment.y === obs.y) &&
+        !obstacles.some(o => o.x === obs.x && o.y === obs.y) &&
+        !(food.x === obs.x && food.y === obs.y);
+    }
+    obstacles.push(obs);
+  }
+}
+
+function spawnBonus() {
+  if (bonusItem) return;
+
+  // 10% chance to spawn if not exists
+  if (Math.random() > 0.1) return;
+
+  let valid = false;
+  let bonus = { x: 0, y: 0, timer: BONUS_DURATION };
+
+  while (!valid) {
+    bonus.x = Math.floor(Math.random() * TILE_COUNT_X);
+    bonus.y = Math.floor(Math.random() * TILE_COUNT_Y);
+
+    valid = !snake.some(segment => segment.x === bonus.x && segment.y === bonus.y) &&
+      !obstacles.some(obs => obs.x === bonus.x && obs.y === bonus.y) &&
+      !(food.x === bonus.x && food.y === bonus.y);
+  }
+  bonusItem = bonus;
 }
 
 function createExplosion(x, y, color) {
@@ -158,6 +217,17 @@ function update(timestamp) {
   if (timestamp - lastTime > GAME_SPEED) {
     moveSnake();
     lastTime = timestamp;
+  }
+
+  // Handle Bonus Item
+  if (bonusItem) {
+    bonusItem.timer -= 16; // approx 60fps
+    if (bonusItem.timer <= 0) {
+      bonusItem = null;
+    }
+  } else if (timestamp - lastBonusSpawnTime > 10000) { // Try spawn every 10s
+    spawnBonus();
+    lastBonusSpawnTime = timestamp;
   }
 
   particles.forEach((p, index) => {
@@ -183,6 +253,12 @@ function moveSnake() {
     return;
   }
 
+  // Obstacle Collision
+  if (obstacles.some(obs => obs.x === head.x && obs.y === head.y)) {
+    gameOver();
+    return;
+  }
+
   snake.unshift(head);
 
   // Eat Food
@@ -190,7 +266,23 @@ function moveSnake() {
     score += 10;
     scoreEl.textContent = score;
     createExplosion(food.x, food.y, '#f472b6');
+
+    // Level Up Check
+    if (score % LEVEL_UP_SCORE === 0) {
+      level++;
+      levelEl.textContent = level;
+      generateObstacles();
+      createExplosion(head.x, head.y, '#ffffff'); // Level up effect
+    }
+
     placeFood();
+  } else if (bonusItem && head.x === bonusItem.x && head.y === bonusItem.y) {
+    // Eat Bonus
+    score += BONUS_SCORE;
+    scoreEl.textContent = score;
+    createExplosion(bonusItem.x, bonusItem.y, BONUS_COLOR);
+    bonusItem = null;
+    // Don't pop, snake grows
   } else {
     snake.pop();
   }
@@ -200,6 +292,42 @@ function draw() {
   // Clear Canvas
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Draw Obstacles
+  ctx.fillStyle = OBSTACLE_COLOR;
+  ctx.shadowBlur = 0;
+  obstacles.forEach(obs => {
+    ctx.fillRect(obs.x * GRID_SIZE, obs.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+  });
+
+  // Draw Bonus Item
+  if (bonusItem) {
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = BONUS_COLOR;
+    ctx.fillStyle = BONUS_COLOR;
+    ctx.beginPath();
+    ctx.arc(
+      bonusItem.x * GRID_SIZE + GRID_SIZE / 2,
+      bonusItem.y * GRID_SIZE + GRID_SIZE / 2,
+      GRID_SIZE / 2 - 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+
+    // Draw timer indicator (ring)
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(
+      bonusItem.x * GRID_SIZE + GRID_SIZE / 2,
+      bonusItem.y * GRID_SIZE + GRID_SIZE / 2,
+      GRID_SIZE / 2 + 2,
+      0,
+      (Math.PI * 2) * (bonusItem.timer / BONUS_DURATION)
+    );
+    ctx.stroke();
+  }
 
   // Draw Food
   ctx.shadowBlur = 15;
