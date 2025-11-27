@@ -1,0 +1,2 @@
+[main f4f613b] Fix 404 errors: remove base path and update HTML structure
+ 2 files changed, 47 insertions(+), 24 deletions(-)

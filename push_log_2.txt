@@ -1,0 +1,17 @@
+git : To https://github.com/
+emrebulun/snakegame.git
+At line:1 char:1
++ git push origin main 2>&1 
+| Out-File -FilePath push_lo
+g_2.txt -Encodi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (To ht  
+  tps://gith...n/snakegam   
+ e.git:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+   8468d8d..f4f613b  main ->
+ main

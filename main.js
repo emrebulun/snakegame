@@ -164,7 +164,12 @@ function placeFood() {
 
 function generateObstacles() {
   obstacles = [];
-  const obstacleCount = (level - 1) * 3; // 3 obstacles per level after level 1
+  let obstacleCount = 1;
+  if (level <= 4) {
+    obstacleCount = level;
+  } else {
+    obstacleCount = 4 + (level - 4) * 2;
+  }
 
   for (let i = 0; i < obstacleCount; i++) {
     let valid = false;
@@ -241,11 +246,21 @@ function moveSnake() {
 
   let head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
-  // Wrap around edges (teleportation)
-  if (head.x < 0) head.x = TILE_COUNT_X - 1;
-  if (head.x >= TILE_COUNT_X) head.x = 0;
-  if (head.y < 0) head.y = TILE_COUNT_Y - 1;
-  if (head.y >= TILE_COUNT_Y) head.y = 0;
+  // Wall Collision / Wrapping Logic
+  const wallsClosed = score >= 500;
+
+  if (wallsClosed) {
+    if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) {
+      gameOver();
+      return;
+    }
+  } else {
+    // Wrap around edges
+    if (head.x < 0) head.x = TILE_COUNT_X - 1;
+    if (head.x >= TILE_COUNT_X) head.x = 0;
+    if (head.y < 0) head.y = TILE_COUNT_Y - 1;
+    if (head.y >= TILE_COUNT_Y) head.y = 0;
+  }
 
   // Self Collision
   if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
@@ -292,6 +307,13 @@ function draw() {
   // Clear Canvas
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Draw Wall Border if closed
+  if (score >= 500) {
+    ctx.strokeStyle = '#ef4444'; // Red
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
 
   // Draw Obstacles
   ctx.fillStyle = OBSTACLE_COLOR;
