@@ -34,6 +34,7 @@ let level = 1;
 let obstacles = [];
 let bonusItem = null; // {x, y, timer}
 let lastBonusSpawnTime = 0;
+let closedAxis = null; // 'x' or 'y' when score >= 250
 
 // UI Elements
 const scoreEl = document.getElementById('score');
@@ -138,6 +139,7 @@ function initGame() {
   bonusItem = null;
   isGameOver = false;
   particles = [];
+  closedAxis = null;
   scoreEl.textContent = score;
   levelEl.textContent = level;
   placeFood();
@@ -163,7 +165,7 @@ function placeFood() {
 }
 
 function generateObstacles() {
-  obstacles = [];
+  // obstacles = []; // Removed to keep existing obstacles
   let obstacleCount = 1;
   if (level <= 4) {
     obstacleCount = level;
@@ -171,7 +173,11 @@ function generateObstacles() {
     obstacleCount = 4 + (level - 4) * 2;
   }
 
-  for (let i = 0; i < obstacleCount; i++) {
+  // Only add new obstacles if needed
+  const currentCount = obstacles.length;
+  const countToAdd = obstacleCount - currentCount;
+
+  for (let i = 0; i < countToAdd; i++) {
     let valid = false;
     let obs = { x: 0, y: 0 };
     while (!valid) {
@@ -247,19 +253,46 @@ function moveSnake() {
   let head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
   // Wall Collision / Wrapping Logic
-  const wallsClosed = score >= 500;
+  // Score >= 500: All walls closed
+  // Score >= 250: One axis closed (randomly picked if not yet set)
 
-  if (wallsClosed) {
+  if (score >= 250 && !closedAxis) {
+    closedAxis = Math.random() < 0.5 ? 'x' : 'y';
+  }
+
+  let hitWall = false;
+
+  if (score >= 500) {
     if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) {
-      gameOver();
-      return;
+      hitWall = true;
+    }
+  } else if (score >= 250) {
+    if (closedAxis === 'x') {
+      // Left/Right closed
+      if (head.x < 0 || head.x >= TILE_COUNT_X) hitWall = true;
+
+      // Y wraps
+      if (head.y < 0) head.y = TILE_COUNT_Y - 1;
+      if (head.y >= TILE_COUNT_Y) head.y = 0;
+    } else {
+      // Top/Bottom closed
+      if (head.y < 0 || head.y >= TILE_COUNT_Y) hitWall = true;
+
+      // X wraps
+      if (head.x < 0) head.x = TILE_COUNT_X - 1;
+      if (head.x >= TILE_COUNT_X) head.x = 0;
     }
   } else {
-    // Wrap around edges
+    // All wrap
     if (head.x < 0) head.x = TILE_COUNT_X - 1;
     if (head.x >= TILE_COUNT_X) head.x = 0;
     if (head.y < 0) head.y = TILE_COUNT_Y - 1;
     if (head.y >= TILE_COUNT_Y) head.y = 0;
+  }
+
+  if (hitWall) {
+    gameOver();
+    return;
   }
 
   // Self Collision
@@ -309,10 +342,29 @@ function draw() {
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   // Draw Wall Border if closed
+  ctx.strokeStyle = '#ef4444'; // Red
+  ctx.lineWidth = 4;
+
   if (score >= 500) {
-    ctx.strokeStyle = '#ef4444'; // Red
-    ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  } else if (score >= 250 && closedAxis) {
+    ctx.beginPath();
+    if (closedAxis === 'x') {
+      // Left
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, CANVAS_HEIGHT);
+      // Right
+      ctx.moveTo(CANVAS_WIDTH, 0);
+      ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    } else {
+      // Top
+      ctx.moveTo(0, 0);
+      ctx.lineTo(CANVAS_WIDTH, 0);
+      // Bottom
+      ctx.moveTo(0, CANVAS_HEIGHT);
+      ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+    ctx.stroke();
   }
 
   // Draw Obstacles
